@@ -2,49 +2,51 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>TuckCoin</title>
+    <title>TuckCoin Secure</title>
     <style>
         body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; padding: 50px; }
         .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 350px; }
         input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 5px; }
         button:hover { background: #0056b3; }
         .balance-display { font-size: 1.5rem; font-weight: bold; color: #28a745; text-align: center; margin: 20px 0; }
         .hidden { display: none; }
-        .error { color: #dc3545; font-size: 0.8rem; }
+        .error { color: #dc3545; font-size: 0.8rem; margin-bottom: 10px; }
+        .toggle-link { font-size: 0.8rem; color: #007bff; cursor: pointer; text-decoration: underline; display: block; text-align: center; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div id="setup-section">
-        <h2>Create Account</h2>
-        <input type="text" id="username-input" placeholder="Choose Account Name">
-        <button onclick="createAccount()">Start Earning</button>
-        <p id="setup-error" class="error"></p>
+    <div id="auth-section">
+        <h2 id="auth-title">Login</h2>
+        <input type="text" id="username-input" placeholder="Username">
+        <input type="password" id="password-input" placeholder="Password">
+        
+        <button id="auth-btn" onclick="handleAuth()">Login</button>
+        <p id="auth-error" class="error"></p>
+        
+        <span id="toggle-mode" class="toggle-link" onclick="toggleAuthMode()">Don't have an account? Sign Up</span>
     </div>
 
     <div id="wallet-section" class="hidden">
         <h2 id="welcome-msg">Welcome!</h2>
         <div class="balance-display">$<span id="balance-amount">0</span></div>
-        
         <hr>
-        
         <h3>Transfer Money</h3>
         <input type="text" id="target-user" placeholder="Recipient Name">
         <input type="number" id="transfer-amount" placeholder="Amount">
         <button onclick="transfer()">Send Credits</button>
         <p id="transfer-msg"></p>
-        
         <br>
-        <button onclick="logout()" style="background:#6c757d">Log Out / Switch User</button>
+        <button onclick="logout()" style="background:#6c757d">Log Out</button>
     </div>
 </div>
 
 <script>
     let currentUser = null;
+    let isLoginMode = true;
 
-    // Load user data from "Database" (LocalStorage)
     function getDB() {
         return JSON.parse(localStorage.getItem('bank_db')) || {};
     }
@@ -53,22 +55,51 @@
         localStorage.setItem('bank_db', JSON.stringify(db));
     }
 
-    function createAccount() {
+    function toggleAuthMode() {
+        isLoginMode = !isLoginMode;
+        document.getElementById('auth-title').innerText = isLoginMode ? "Login" : "Create Account";
+        document.getElementById('auth-btn').innerText = isLoginMode ? "Login" : "Start Earning";
+        document.getElementById('toggle-mode').innerText = isLoginMode ? "Don't have an account? Sign Up" : "Already have an account? Login";
+        document.getElementById('auth-error').innerText = "";
+    }
+
+    function handleAuth() {
         const name = document.getElementById('username-input').value.trim();
-        if (!name) return;
+        const pass = document.getElementById('password-input').value.trim();
+        const errorMsg = document.getElementById('auth-error');
+        
+        if (!name || !pass) {
+            errorMsg.innerText = "Please fill in all fields.";
+            return;
+        }
 
         let db = getDB();
-        if (!db[name]) {
-            db[name] = { balance: 100.00 }; // New accounts get $100 starter
-            saveDB(db);
+
+        if (isLoginMode) {
+            // Login Logic
+            if (db[name] && db[name].password === pass) {
+                login(name);
+            } else {
+                errorMsg.innerText = "Invalid username or password.";
+            }
+        } else {
+            // Sign Up Logic
+            if (db[name]) {
+                errorMsg.innerText = "Username already exists!";
+            } else {
+                db[name] = { 
+                    password: pass, 
+                    balance: 100.00 
+                };
+                saveDB(db);
+                login(name);
+            }
         }
-        
-        login(name);
     }
 
     function login(name) {
         currentUser = name;
-        document.getElementById('setup-section').classList.add('hidden');
+        document.getElementById('auth-section').classList.add('hidden');
         document.getElementById('wallet-section').classList.remove('hidden');
         document.getElementById('welcome-msg').innerText = `Hello, ${name}!`;
         updateDisplay();
@@ -106,7 +137,7 @@
     }
 
     function logout() {
-        location.reload(); // Quickest way to reset the UI state
+        location.reload();
     }
 </script>
 
