@@ -2,17 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TuckCoin Background</title>
+    <title>TuckCoin - Secure Wallet</title>
     <style>
+        /* --- BACKGROUND & ANIMATION STYLES --- */
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
-            overflow: hidden; /* Keeps scrollbars from appearing */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
         }
 
-        /* The base gradient layer */
+        /* Yellow to Orange Gradient */
         .gradient-base {
             position: fixed;
             top: 0;
@@ -23,42 +27,48 @@
             z-index: -2;
         }
 
-        /* The scrolling coin layer */
+        /* Scrolling Coin Layer */
         .coin-overlay {
             position: fixed;
             top: 0;
             left: 0;
-            width: 200%; /* Wider than screen to allow seamless scroll */
+            width: 200%; 
             height: 200%;
-            background-image: url('coin.jpg');
-            background-size: 100px 100px; /* Adjust size of the coins here */
+            background-image: url('https://raw.githubusercontent.com/TheGodlyTree/Tucker-Coin-Wallet/main/coin.jpg');
+            background-size: 120px 120px; 
             background-repeat: repeat;
-            opacity: 0.3; /* Makes coins subtle so they don't hide text */
+            opacity: 0.2; /* Light opacity so it doesn't distract from the wallet */
             z-index: -1;
-            animation: moveBackground 20s linear infinite;
+            animation: moveBackground 15s linear infinite;
         }
 
-        /* Animation to shift the background position */
         @keyframes moveBackground {
-            from {
-                transform: translate(0, 0);
-            }
-            to {
-                /* Moves diagonally; adjust numbers for different directions */
-                transform: translate(-100px, -100px);
-            }
+            from { transform: translate(0, 0); }
+            to { transform: translate(-120px, -120px); }
         }
 
-        /* Centered content placeholder */
-        .content {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            font-family: 'Segoe UI', sans-serif;
+        /* --- WALLET CARD STYLES --- */
+        .card { 
+            background: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
+            padding: 2.5rem; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+            width: 380px; 
+            position: relative;
+            z-index: 10;
+            backdrop-filter: blur(5px); /* Blurs the coins behind the card */
         }
+
+        h2 { margin-top: 0; color: #4a2c00; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        button { width: 100%; padding: 12px; background: #ff9800; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.3s; }
+        button:hover { background: #e68a00; transform: translateY(-2px); }
+        
+        .balance-display { font-size: 2rem; font-weight: bold; color: #28a745; text-align: center; margin: 20px 0; }
+        .hidden { display: none; }
+        .error { color: #dc3545; font-size: 0.85rem; text-align: center; margin-top: 5px; }
+        .toggle-link { font-size: 0.85rem; color: #007bff; cursor: pointer; text-decoration: underline; display: block; text-align: center; margin-top: 15px; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -66,9 +76,122 @@
     <div class="gradient-base"></div>
     <div class="coin-overlay"></div>
 
-    <div class="content">
-        <h1>TuckCoin is Loading...</h1>
+    <div class="card">
+        <div id="auth-section">
+            <h2 id="auth-title">Tucker Wallet Login</h2>
+            <input type="text" id="username-input" placeholder="Username">
+            <input type="password" id="password-input" placeholder="Password">
+            
+            <button id="auth-btn" onclick="handleAuth()">Login</button>
+            <p id="auth-error" class="error"></p>
+            
+            <span id="toggle-mode" class="toggle-link" onclick="toggleAuthMode()">Don't have an account? Sign Up</span>
+        </div>
+
+        <div id="wallet-section" class="hidden">
+            <h2 id="welcome-msg">Hello!</h2>
+            <div class="balance-display">$<span id="balance-amount">0</span></div>
+            <hr>
+            <h3 style="font-size: 1rem; color: #666;">Transfer Credits</h3>
+            <input type="text" id="target-user" placeholder="Recipient Name">
+            <input type="number" id="transfer-amount" placeholder="Amount">
+            <button onclick="transfer()">Send Credits</button>
+            <p id="transfer-msg" style="text-align: center; font-size: 0.9rem;"></p>
+            <br>
+            <button onclick="logout()" style="background:#6c757d">Log Out</button>
+        </div>
     </div>
 
+    <script>
+        let currentUser = null;
+        let isLoginMode = true;
+
+        function getDB() {
+            return JSON.parse(localStorage.getItem('bank_db')) || {};
+        }
+
+        function saveDB(db) {
+            localStorage.setItem('bank_db', JSON.stringify(db));
+        }
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? "Tucker Wallet Login" : "Create Account";
+            document.getElementById('auth-btn').innerText = isLoginMode ? "Login" : "Start Earning";
+            document.getElementById('toggle-mode').innerText = isLoginMode ? "Don't have an account? Sign Up" : "Already have an account? Login";
+            document.getElementById('auth-error').innerText = "";
+        }
+
+        function handleAuth() {
+            const name = document.getElementById('username-input').value.trim();
+            const pass = document.getElementById('password-input').value.trim();
+            const errorMsg = document.getElementById('auth-error');
+            
+            if (!name || !pass) {
+                errorMsg.innerText = "Please fill in all fields.";
+                return;
+            }
+
+            let db = getDB();
+
+            if (isLoginMode) {
+                if (db[name] && db[name].password === pass) {
+                    login(name);
+                } else {
+                    errorMsg.innerText = "Invalid username or password.";
+                }
+            } else {
+                if (db[name]) {
+                    errorMsg.innerText = "Username already exists!";
+                } else {
+                    db[name] = { password: pass, balance: 100.00 };
+                    saveDB(db);
+                    login(name);
+                }
+            }
+        }
+
+        function login(name) {
+            currentUser = name;
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('wallet-section').classList.remove('hidden');
+            document.getElementById('welcome-msg').innerText = `Hello, ${name}!`;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const db = getDB();
+            document.getElementById('balance-amount').innerText = db[currentUser].balance.toFixed(2);
+        }
+
+        function transfer() {
+            const target = document.getElementById('target-user').value.trim();
+            const amount = parseFloat(document.getElementById('transfer-amount').value);
+            const msg = document.getElementById('transfer-msg');
+            let db = getDB();
+
+            if (!db[target]) {
+                msg.innerText = "User does not exist!";
+                msg.style.color = "red";
+                return;
+            }
+
+            if (amount > 0 && db[currentUser].balance >= amount) {
+                db[currentUser].balance -= amount;
+                db[target].balance += amount;
+                saveDB(db);
+                updateDisplay();
+                msg.innerText = "Transfer Successful!";
+                msg.style.color = "green";
+            } else {
+                msg.innerText = "Invalid amount or low balance.";
+                msg.style.color = "red";
+            }
+        }
+
+        function logout() {
+            location.reload();
+        }
+    </script>
 </body>
 </html>
