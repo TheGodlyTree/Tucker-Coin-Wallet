@@ -2,144 +2,148 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>TuckCoin Secure</title>
+    <title>TuckCoin - Secure Wallet</title>
     <style>
-        body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; padding: 50px; }
-        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 350px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 5px; }
-        button:hover { background: #0056b3; }
-        .balance-display { font-size: 1.5rem; font-weight: bold; color: #28a745; text-align: center; margin: 20px 0; }
+        /* --- BACKGROUND SYSTEM --- */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* This ensures even if everything fails, you see Orange */
+            background-color: #ff9800; 
+            overflow: hidden;
+        }
+
+        /* 1. Base Gradient Layer */
+        .gradient-base {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #ffeb3b 0%, #ff9800 100%);
+            z-index: -2;
+        }
+
+        /* 2. Scrolling Coin Layer */
+        .coin-overlay {
+            position: fixed;
+            top: -120px; /* Buffer for animation */
+            left: -120px;
+            width: calc(100vw + 240px); 
+            height: calc(100vh + 240px);
+            
+            /* UPDATED LINK: Using the raw.githubusercontent.com domain */
+            background-image: url('https://raw.githubusercontent.com/TheGodlyTree/Tucker-Coin-Wallet/main/coin.jpg');
+            
+            background-size: 100px 100px; 
+            background-repeat: repeat;
+            opacity: 0.25; 
+            z-index: -1;
+            animation: moveBackground 10s linear infinite;
+            pointer-events: none; /* Allows clicking through to the card */
+        }
+
+        @keyframes moveBackground {
+            from { transform: translate(0, 0); }
+            to { transform: translate(100px, 100px); }
+        }
+
+        /* --- WALLET CARD --- */
+        .card { 
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem; 
+            border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
+            width: 340px; 
+            z-index: 10;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        h2 { margin-top: 0; color: #5c3d00; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #ff9800; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:hover { background: #e68a00; }
         .hidden { display: none; }
-        .error { color: #dc3545; font-size: 0.8rem; margin-bottom: 10px; }
-        .toggle-link { font-size: 0.8rem; color: #007bff; cursor: pointer; text-decoration: underline; display: block; text-align: center; margin-top: 10px; }
+        .balance-display { font-size: 2rem; font-weight: bold; color: #28a745; text-align: center; margin: 15px 0; }
+        .error { color: #dc3545; font-size: 0.8rem; text-align: center; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <div id="auth-section">
-        <h2 id="auth-title">Login</h2>
-        <input type="text" id="username-input" placeholder="Username">
-        <input type="password" id="password-input" placeholder="Password">
-        
-        <button id="auth-btn" onclick="handleAuth()">Login</button>
-        <p id="auth-error" class="error"></p>
-        
-        <span id="toggle-mode" class="toggle-link" onclick="toggleAuthMode()">Don't have an account? Sign Up</span>
+    <div class="gradient-base"></div>
+    <div class="coin-overlay"></div>
+
+    <div class="card">
+        <div id="auth-section">
+            <h2>TuckCoin Login</h2>
+            <input type="text" id="username-input" placeholder="Username">
+            <input type="password" id="password-input" placeholder="Password">
+            <button onclick="handleAuth()">Login / Sign Up</button>
+            <p id="auth-error" class="error"></p>
+        </div>
+
+        <div id="wallet-section" class="hidden">
+            <h2 id="welcome-msg">Wallet</h2>
+            <div class="balance-display">$<span id="balance-amount">0</span></div>
+            <hr>
+            <input type="text" id="target-user" placeholder="Recipient">
+            <input type="number" id="transfer-amount" placeholder="Amount">
+            <button onclick="transfer()">Send Credits</button>
+            <p id="transfer-msg" style="text-align:center"></p>
+            <button onclick="location.reload()" style="background:#6c757d">Log Out</button>
+        </div>
     </div>
 
-    <div id="wallet-section" class="hidden">
-        <h2 id="welcome-msg">Welcome!</h2>
-        <div class="balance-display">$<span id="balance-amount">0</span></div>
-        <hr>
-        <h3>Transfer Money</h3>
-        <input type="text" id="target-user" placeholder="Recipient Name">
-        <input type="number" id="transfer-amount" placeholder="Amount">
-        <button onclick="transfer()">Send Credits</button>
-        <p id="transfer-msg"></p>
-        <br>
-        <button onclick="logout()" style="background:#6c757d">Log Out</button>
-    </div>
-</div>
+    <script>
+        // Use your existing logic here
+        function getDB() { return JSON.parse(localStorage.getItem('bank_db')) || {}; }
+        function saveDB(db) { localStorage.setItem('bank_db', JSON.stringify(db)); }
 
-<script>
-    let currentUser = null;
-    let isLoginMode = true;
+        function handleAuth() {
+            const name = document.getElementById('username-input').value.trim();
+            const pass = document.getElementById('password-input').value.trim();
+            if (!name || !pass) return;
 
-    function getDB() {
-        return JSON.parse(localStorage.getItem('bank_db')) || {};
-    }
-
-    function saveDB(db) {
-        localStorage.setItem('bank_db', JSON.stringify(db));
-    }
-
-    function toggleAuthMode() {
-        isLoginMode = !isLoginMode;
-        document.getElementById('auth-title').innerText = isLoginMode ? "Login" : "Create Account";
-        document.getElementById('auth-btn').innerText = isLoginMode ? "Login" : "Start Earning";
-        document.getElementById('toggle-mode').innerText = isLoginMode ? "Don't have an account? Sign Up" : "Already have an account? Login";
-        document.getElementById('auth-error').innerText = "";
-    }
-
-    function handleAuth() {
-        const name = document.getElementById('username-input').value.trim();
-        const pass = document.getElementById('password-input').value.trim();
-        const errorMsg = document.getElementById('auth-error');
-        
-        if (!name || !pass) {
-            errorMsg.innerText = "Please fill in all fields.";
-            return;
-        }
-
-        let db = getDB();
-
-        if (isLoginMode) {
-            // Login Logic
-            if (db[name] && db[name].password === pass) {
-                login(name);
-            } else {
-                errorMsg.innerText = "Invalid username or password.";
-            }
-        } else {
-            // Sign Up Logic
-            if (db[name]) {
-                errorMsg.innerText = "Username already exists!";
-            } else {
-                db[name] = { 
-                    password: pass, 
-                    balance: 100.00 
-                };
+            let db = getDB();
+            if (!db[name]) {
+                db[name] = { password: pass, balance: 100.00 };
                 saveDB(db);
-                login(name);
+            }
+
+            if (db[name].password === pass) {
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('wallet-section').classList.remove('hidden');
+                document.getElementById('welcome-msg').innerText = "Hello, " + name;
+                document.getElementById('balance-amount').innerText = db[name].balance.toFixed(2);
+                window.currentUser = name;
+            } else {
+                document.getElementById('auth-error').innerText = "Wrong password!";
             }
         }
-    }
 
-    function login(name) {
-        currentUser = name;
-        document.getElementById('auth-section').classList.add('hidden');
-        document.getElementById('wallet-section').classList.remove('hidden');
-        document.getElementById('welcome-msg').innerText = `Hello, ${name}!`;
-        updateDisplay();
-    }
-
-    function updateDisplay() {
-        const db = getDB();
-        document.getElementById('balance-amount').innerText = db[currentUser].balance.toFixed(2);
-    }
-
-    function transfer() {
-        const target = document.getElementById('target-user').value.trim();
-        const amount = parseFloat(document.getElementById('transfer-amount').value);
-        const msg = document.getElementById('transfer-msg');
-        let db = getDB();
-
-        if (!db[target]) {
-            msg.innerText = "Error: User does not exist!";
-            msg.className = "error";
-            return;
+        function transfer() {
+            const target = document.getElementById('target-user').value.trim();
+            const amount = parseFloat(document.getElementById('transfer-amount').value);
+            let db = getDB();
+            if (db[target] && amount > 0 && db[window.currentUser].balance >= amount) {
+                db[window.currentUser].balance -= amount;
+                db[target].balance += amount;
+                saveDB(db);
+                document.getElementById('balance-amount').innerText = db[window.currentUser].balance.toFixed(2);
+                document.getElementById('transfer-msg').innerText = "Success!";
+                document.getElementById('transfer-msg').style.color = "green";
+            } else {
+                document.getElementById('transfer-msg').innerText = "Transfer failed.";
+                document.getElementById('transfer-msg').style.color = "red";
+            }
         }
-
-        if (amount > 0 && db[currentUser].balance >= amount) {
-            db[currentUser].balance -= amount;
-            db[target].balance += amount;
-            saveDB(db);
-            updateDisplay();
-            msg.innerText = "Transfer Successful!";
-            msg.className = "";
-            msg.style.color = "green";
-        } else {
-            msg.innerText = "Invalid amount or low balance.";
-            msg.className = "error";
-        }
-    }
-
-    function logout() {
-        location.reload();
-    }
-</script>
-
+    </script>
 </body>
 </html>
